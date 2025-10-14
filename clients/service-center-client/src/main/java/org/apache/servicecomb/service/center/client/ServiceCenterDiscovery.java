@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.servicecomb.http.client.task.AbstractTask;
@@ -100,6 +101,8 @@ public class ServiceCenterDiscovery extends AbstractTask {
   private boolean started = false;
 
   private final Object lock = new Object();
+
+  private final Random random = new Random();
 
   public ServiceCenterDiscovery(ServiceCenterClient serviceCenterClient, EventBus eventBus) {
     super("service-center-discovery-task");
@@ -186,11 +189,14 @@ public class ServiceCenterDiscovery extends AbstractTask {
         }
       }
     } catch (Exception e) {
-      LOGGER.warn("find service {}#{} instance failed.", k.appId, k.serviceName, e);
       if (!(e.getCause() instanceof IOException)) {
         // for IOException, do not remove cache, or when service center
         // not available, invocation between microservices will fail.
         failedKeys.add(k);
+        LOGGER.error("find service {}#{} instance failed and remove local cache.", k.appId, k.serviceName, e);
+      } else {
+        LOGGER.warn("find service {}#{} instance failed, remaining local instances cache, cause message: {}",
+            k.appId, k.serviceName, e.getMessage());
       }
     }
     return failedKeys;
@@ -216,8 +222,15 @@ public class ServiceCenterDiscovery extends AbstractTask {
     public void execute() {
       pullAllInstance();
 
-      startTask(new BackOffSleepTask(pollInterval, new PullInstanceTask()));
+      startTask(new BackOffSleepTask(buildPollIntervalWithSalt(), new PullInstanceTask()));
     }
+  }
+
+  private long buildPollIntervalWithSalt() {
+    int positive = random.nextInt(5);
+    int sign = random.nextBoolean() ? 1 : -1;
+    long currentPollInterval = pollInterval + sign * positive * 1000;
+    return currentPollInterval > 0 ? currentPollInterval : pollInterval;
   }
 
   class PullInstanceOnceTask implements Task {

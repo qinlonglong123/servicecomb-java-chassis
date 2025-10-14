@@ -5,9 +5,7 @@
  * The ASF licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
- *
  *     http://www.apache.org/licenses/LICENSE-2.0
- *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -24,6 +22,7 @@ import org.slf4j.LoggerFactory;
 import io.vertx.core.Context;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpClientOptions;
+import io.vertx.core.http.PoolOptions;
 
 // execute in vertx context
 public class HttpClientPoolFactory implements ClientPoolFactory<HttpClientWithContext> {
@@ -31,13 +30,18 @@ public class HttpClientPoolFactory implements ClientPoolFactory<HttpClientWithCo
 
   private final HttpClientOptions httpClientOptions;
 
-  public HttpClientPoolFactory(HttpClientOptions httpClientOptions) {
+  private final PoolOptions poolOptions;
+
+  public HttpClientPoolFactory(HttpClientOptions httpClientOptions, PoolOptions poolOptions) {
     this.httpClientOptions = httpClientOptions;
+    this.poolOptions = poolOptions;
   }
 
   @Override
   public HttpClientWithContext createClientPool(Context context) {
-    HttpClient httpClient = context.owner().httpClientBuilder().with(httpClientOptions)
+    HttpClient httpClient = context.owner().httpClientBuilder()
+        .with(httpClientOptions)
+        .with(poolOptions)
         .withConnectHandler(connection -> {
           LOGGER.debug("http connection connected, local:{}, remote:{}.",
               connection.localAddress(), connection.remoteAddress());
@@ -46,7 +50,7 @@ public class HttpClientPoolFactory implements ClientPoolFactory<HttpClientWithCo
                   connection.localAddress(), connection.remoteAddress())
           );
           connection.exceptionHandler(e ->
-              LOGGER.info("http connection exception, local:{}, remote:{}.",
+              LOGGER.error("http connection exception, local:{}, remote:{}.",
                   connection.localAddress(), connection.remoteAddress(), e)
           );
         }).build();

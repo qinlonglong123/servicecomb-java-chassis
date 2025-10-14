@@ -17,6 +17,8 @@
 
 package org.apache.servicecomb.samples;
 
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.servicecomb.core.CoreConst;
@@ -33,27 +35,29 @@ public class WebsocketController {
   @PostMapping("/websocket")
   @Transport(name = CoreConst.WEBSOCKET)
   public void websocket(ServerWebSocket serverWebsocket) {
-    // Client may have not registered message handler, and messages sent may get lost.
-    // So we sleep for a while to send message.
     AtomicInteger receiveCount = new AtomicInteger(0);
+    CountDownLatch startSend = new CountDownLatch(1);
     serverWebsocket.textMessageHandler(s -> {
+      if ("start".equals(s)) {
+        startSend.countDown();
+        serverWebsocket.writeTextMessage("started");
+        return;
+      }
       receiveCount.getAndIncrement();
     });
     serverWebsocket.closeHandler((v) -> System.out.println("closed"));
 
     new Thread(() -> {
       try {
-        Thread.sleep(1000);
+        startSend.await(30, TimeUnit.SECONDS);
       } catch (InterruptedException e) {
         e.printStackTrace();
       }
 
-      serverWebsocket.writeTextMessage("hello", r -> {
-      });
+      serverWebsocket.writeTextMessage("hello");
 
       for (int i = 0; i < 5; i++) {
-        serverWebsocket.writeTextMessage("hello " + i, r -> {
-        });
+        serverWebsocket.writeTextMessage("hello " + i);
         try {
           Thread.sleep(500);
         } catch (InterruptedException e) {

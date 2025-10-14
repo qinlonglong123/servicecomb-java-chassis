@@ -22,7 +22,7 @@
   <parent>
     <groupId>org.apache.servicecomb</groupId>
     <artifactId>java-chassis-parent</artifactId>
-    <version>3.3.0-SNAPSHOT</version>
+    <version>3.4.0-SNAPSHOT</version>
     <relativePath>../parents/default</relativePath>
   </parent>
   <groupId>org.apache.servicecomb.demo</groupId>
@@ -52,7 +52,8 @@
     <module>demo-cse-v1</module>
     <module>demo-cse-v2</module>
     <module>demo-nacos</module>
-    <module>demo-etcd</module>
+    <!-- TODO: etcd for vert.x 5.x is not released, after release will support it-->
+    <!-- <module>demo-etcd</module> -->
     <module>demo-zookeeper</module>
     <module>demo-consul</module>
   </modules>
